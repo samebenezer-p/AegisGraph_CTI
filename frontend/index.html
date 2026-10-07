@@ -58,7 +58,10 @@
       <div class="kpi-card verdict-card" id="card-verdict">
         <div class="kpi-header">
           <span class="kpi-tag">SYSTEM VERDICT</span>
-          <span class="badge" id="badge-verdict-type">READY</span>
+          <div style="display:flex;gap:6px;">
+            <span class="badge" id="badge-final-verdict">STANDBY</span>
+            <span class="badge" id="badge-verdict-type">READY</span>
+          </div>
         </div>
         <div class="verdict-display">
           <span class="verdict-symbol" id="verdict-icon">🟢</span>
@@ -85,8 +88,12 @@
           </div>
           <div class="risk-meta">
             <div class="meta-row">
-              <span class="meta-label">Progression Depth:</span>
-              <span class="meta-val" id="val-progression-score">0%</span>
+              <span class="meta-label">Evidence Sufficiency:</span>
+              <span class="meta-val highlight-cyan" id="val-evidence-sufficiency">0.0%</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Chain Completeness:</span>
+              <span class="meta-val highlight-amber" id="val-chain-completeness">0.0%</span>
             </div>
             <div class="meta-row">
               <span class="meta-label">Blast Radius:</span>
@@ -192,6 +199,33 @@
         </div>
       </section>
     </div>
+
+    <!-- Hypothesis Reasoning Panel: Attack vs Benign Hypothesis -->
+    <section class="panel hypothesis-panel" aria-label="Hypothesis Reasoning">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="panel-icon">⚖️</span>
+          <h3 class="panel-title">Hypothesis Reasoning: Attack vs. Benign Plausibility</h3>
+        </div>
+        <span class="badge" id="badge-hypo-verdict">HYPOTHESIS EVALUATION</span>
+      </div>
+      <div class="hypothesis-body">
+        <div class="hypothesis-grid">
+          <div class="hypo-card attack">
+            <h4 class="hypo-title">🔴 ATTACK HYPOTHESIS</h4>
+            <p class="hypo-text" id="text-attack-hypothesis">Awaiting scenario analysis...</p>
+          </div>
+          <div class="hypo-card benign">
+            <h4 class="hypo-title">🟢 BENIGN HYPOTHESIS</h4>
+            <p class="hypo-text" id="text-benign-hypothesis">Awaiting scenario analysis...</p>
+          </div>
+        </div>
+        <div class="hypo-eval-box">
+          <span class="hypo-eval-label">Evaluation &amp; Defensible Verdict Selection:</span>
+          <p class="hypo-eval-text" id="text-hypothesis-evaluation">Select a scenario to evaluate competing hypotheses.</p>
+        </div>
+      </div>
+    </section>
 
     <!-- Bottom Split: Forensic Evidence Proofs & Mitigation Action Center -->
     <div class="bottom-layout">

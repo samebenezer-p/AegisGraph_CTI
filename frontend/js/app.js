@@ -67,22 +67,50 @@ document.addEventListener('DOMContentLoaded', () => {
       btnRunAnalysis.disabled = false;
       btnRunAnalysis.innerHTML = '<span class="btn-icon">⚡</span> Analyze Threat';
     }
-  }
-
-  // Render Incident Report
+   // Render Incident Report
   function renderIncidentReport(report) {
     // 1. Verdict Card
     const verdictHeading = document.getElementById('verdict-heading');
     const verdictDesc = document.getElementById('verdict-desc');
     const verdictIcon = document.getElementById('verdict-icon');
     const verdictBadge = document.getElementById('badge-verdict-type');
+    const badgeFinalVerdict = document.getElementById('badge-final-verdict');
 
-    if (report.is_attack) {
+    const finalVerdict = report.final_verdict || (report.is_attack ? 'LIKELY_ATTACK' : 'NORMAL');
+
+    if (badgeFinalVerdict) {
+      badgeFinalVerdict.textContent = finalVerdict;
+      if (finalVerdict === 'LIKELY_ATTACK') {
+        badgeFinalVerdict.className = 'badge danger';
+      } else if (finalVerdict === 'INSUFFICIENT_EVIDENCE') {
+        badgeFinalVerdict.className = 'badge warning';
+      } else if (finalVerdict === 'SUSPICIOUS') {
+        badgeFinalVerdict.className = 'badge warning';
+      } else {
+        badgeFinalVerdict.className = 'badge success';
+      }
+    }
+
+    if (finalVerdict === 'LIKELY_ATTACK') {
       verdictHeading.textContent = 'MALICIOUS ATTACK CHAIN';
       verdictHeading.style.color = '#f43f5e';
       verdictIcon.textContent = '🚨';
-      verdictBadge.textContent = 'COORDINATED THREAT';
+      verdictBadge.textContent = 'CONFIRMED ATTACK';
       verdictBadge.className = 'badge danger';
+      verdictDesc.textContent = report.summary_explanation;
+    } else if (finalVerdict === 'INSUFFICIENT_EVIDENCE') {
+      verdictHeading.textContent = 'INSUFFICIENT EVIDENCE';
+      verdictHeading.style.color = '#f59e0b';
+      verdictIcon.textContent = '⚠️';
+      verdictBadge.textContent = 'UNVERIFIED SUSPICION';
+      verdictBadge.className = 'badge warning';
+      verdictDesc.textContent = report.summary_explanation;
+    } else if (finalVerdict === 'SUSPICIOUS') {
+      verdictHeading.textContent = 'SUSPICIOUS ACTIVITY';
+      verdictHeading.style.color = '#f59e0b';
+      verdictIcon.textContent = '⚠️';
+      verdictBadge.textContent = 'ANOMALOUS';
+      verdictBadge.className = 'badge warning';
       verdictDesc.textContent = report.summary_explanation;
     } else {
       verdictHeading.textContent = 'BENIGN OPERATIONAL BASELINE';
@@ -99,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeRiskLevel = document.getElementById('badge-risk-level');
     const valProgression = document.getElementById('val-progression-score');
     const valBlast = document.getElementById('val-blast-score');
+    const valEvSuff = document.getElementById('val-evidence-sufficiency');
+    const valChainComp = document.getElementById('val-chain-completeness');
 
     const score = report.overall_risk_score;
     gaugeNumber.textContent = Math.round(score);
@@ -119,6 +149,13 @@ document.addEventListener('DOMContentLoaded', () => {
       badgeRiskLevel.className = 'badge success';
     }
 
+    if (valEvSuff) {
+      valEvSuff.textContent = `${(report.evidence_sufficiency_score !== undefined ? report.evidence_sufficiency_score : 0).toFixed(1)}%`;
+    }
+    if (valChainComp) {
+      valChainComp.textContent = `${(report.chain_completeness_score !== undefined ? report.chain_completeness_score : 0).toFixed(1)}%`;
+    }
+
     valProgression.textContent = report.timeline.length > 0 ? `${report.timeline.length * 20}%` : '0%';
     const totalBlastNodes = (report.actors_involved.length + report.devices_involved.length + report.ips_involved.length);
     valBlast.textContent = `${totalBlastNodes} Nodes`;
@@ -131,6 +168,20 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPillList('pills-hosts', report.devices_involved, true);
     renderPillList('pills-ips', report.ips_involved, false);
     renderPillList('pills-apps', report.apps_involved, false);
+
+    // Hypotheses
+    const textAttackHypo = document.getElementById('text-attack-hypothesis');
+    if (textAttackHypo) {
+      textAttackHypo.textContent = report.attack_hypothesis || 'No corroborated attack progression found.';
+    }
+    const textBenignHypo = document.getElementById('text-benign-hypothesis');
+    if (textBenignHypo) {
+      textBenignHypo.textContent = report.benign_hypothesis || 'Operations remain consistent with normal administrative baseline.';
+    }
+    const textHypoEval = document.getElementById('text-hypothesis-evaluation');
+    if (textHypoEval) {
+      textHypoEval.textContent = report.hypothesis_evaluation || 'Forensic verification establishes conclusive operational baseline.';
+    }
 
     // 4. Graph Visualizer
     graphViz.setData(report.graph_nodes, report.graph_edges);
@@ -189,19 +240,63 @@ document.addEventListener('DOMContentLoaded', () => {
     let html = '';
 
     stages.forEach((stage, idx) => {
-      const p = stage.proof;
-      const confPct = Math.round(p.confidence * 100);
+      const p = stage.proof || {};
+      const confPct = Math.round((p.confidence !== undefined ? p.confidence : (stage.confidence !== undefined ? stage.confidence : 0.85)) * 100);
+      const statusBadge = stage.status || 'CONFIRMED';
+      const statusClass = statusBadge === 'CONFIRMED' ? 'badge-status-confirmed' : (statusBadge === 'PARTIAL' ? 'badge-status-partial' : 'badge-status-insufficient');
+
+      const supporting = stage.supporting_evidence || p.supporting_evidence || [];
+      const missing = stage.missing_evidence || p.missing_evidence || [];
+      const contradicting = stage.contradicting_evidence || p.contradicting_evidence || [];
+
+      let supportingHtml = supporting.length > 0
+        ? `<div class="proof-evidence-list" style="margin: 6px 0;">
+             <strong style="color:var(--accent-green);font-size:0.75rem;">✔ Supporting Evidence:</strong>
+             <ul style="margin:2px 0 6px 16px;padding:0;font-size:0.75rem;">${supporting.map(s => `<li class="proof-evidence-item supporting">${escapeHtml(s)}</li>`).join('')}</ul>
+           </div>`
+        : '';
+
+      let missingHtml = missing.length > 0
+        ? `<div class="proof-evidence-list" style="margin: 6px 0;">
+             <strong style="color:var(--accent-amber);font-size:0.75rem;">⚠ Missing Evidence:</strong>
+             <ul style="margin:2px 0 6px 16px;padding:0;font-size:0.75rem;">${missing.map(m => `<li class="proof-evidence-item missing">${escapeHtml(m)}</li>`).join('')}</ul>
+           </div>`
+        : '';
+
+      let contradictingHtml = contradicting.length > 0
+        ? `<div class="proof-evidence-list" style="margin: 6px 0;">
+             <strong style="color:var(--accent-red);font-size:0.75rem;">✖ Contradicting Evidence:</strong>
+             <ul style="margin:2px 0 6px 16px;padding:0;font-size:0.75rem;">${contradicting.map(c => `<li class="proof-evidence-item contradicting">${escapeHtml(c)}</li>`).join('')}</ul>
+           </div>`
+        : '';
+
+      const mitre = stage.mitre_technique || stage.technique_id || 'T0000';
+      const srcEvent = stage.source_event || p.source_event || 'Telemetry Event';
+      const entities = stage.entities && stage.entities.length > 0 ? stage.entities.join(', ') : (stage.actor || 'N/A');
+      const rawLog = p.raw_citation || stage.raw_log || '';
 
       html += `
         <div class="proof-card">
           <div class="proof-header">
-            <span class="proof-id">${escapeHtml(p.evidence_id)} (Stage ${stage.stage_id})</span>
+            <div>
+              <span class="proof-id">${escapeHtml(p.evidence_id || ('EV-' + stage.stage_id))} (Stage ${stage.stage_id}: ${escapeHtml(stage.technique_name || stage.stage_name)})</span>
+              <span class="${statusClass}" style="margin-left:8px;font-size:0.72rem;padding:2px 6px;border-radius:4px;">${statusBadge}</span>
+              <span class="badge" style="margin-left:4px;font-size:0.72rem;background:rgba(255,255,255,0.08);">${escapeHtml(mitre)}</span>
+            </div>
             <span class="proof-confidence-tag">Forensic Confidence: ${confPct}%</span>
           </div>
-          <div class="proof-justification">
-            <strong>Anomaly &amp; Heuristic Proof:</strong> ${escapeHtml(p.justification)}
+          <div class="proof-meta-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:4px;font-size:0.75rem;color:var(--text-muted);margin:6px 0;">
+            <div><strong>Timestamp:</strong> ${escapeHtml(stage.timestamp || 'N/A')}</div>
+            <div><strong>Source Event:</strong> ${escapeHtml(srcEvent)}</div>
+            <div><strong>Entities:</strong> ${escapeHtml(entities)}</div>
           </div>
-          <div class="proof-raw-box">${escapeHtml(p.raw_citation)}</div>
+          <div class="proof-justification">
+            <strong>Forensic Verification &amp; Reason:</strong> ${escapeHtml(p.reason || p.justification || 'Evidence corroborated by telemetry')}
+          </div>
+          ${supportingHtml}
+          ${missingHtml}
+          ${contradictingHtml}
+          <div class="proof-raw-box">${escapeHtml(rawLog)}</div>
         </div>
       `;
     });

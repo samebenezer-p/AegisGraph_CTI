@@ -74,6 +74,8 @@ class GraphEdge(BaseModel):
     event_id: str
     is_suspicious: bool = False
     tactic: Optional[str] = None
+    stage_id: Optional[int] = None
+    raw_log: Optional[str] = None
 
 
 class AttackEvidence(BaseModel):
@@ -85,6 +87,12 @@ class AttackEvidence(BaseModel):
     justification: str
     confidence: float
     indicators: List[str]
+    source_event: Optional[str] = None
+    entities: List[str] = Field(default_factory=list)
+    supporting_evidence: List[str] = Field(default_factory=list)
+    missing_evidence: List[str] = Field(default_factory=list)
+    contradicting_evidence: List[str] = Field(default_factory=list)
+    reason: Optional[str] = None
 
 
 class AttackStage(BaseModel):
@@ -99,6 +107,12 @@ class AttackStage(BaseModel):
     description: str
     proof: AttackEvidence
     risk_contribution: float
+    status: str = "CONFIRMED"  # "CONFIRMED", "PARTIAL", "MISSING", "CONTRADICTED"
+    mitre_technique: Optional[str] = None
+    source_event: Optional[str] = None
+    supporting_evidence: List[str] = Field(default_factory=list)
+    missing_evidence: List[str] = Field(default_factory=list)
+    contradicting_evidence: List[str] = Field(default_factory=list)
 
 
 class MitigationAction(BaseModel):
@@ -115,7 +129,7 @@ class IncidentReport(BaseModel):
     incident_id: str
     detected_at: str
     is_attack: bool
-    verdict: str  # "MALICIOUS_ATTACK_CHAIN" or "BENIGN_BASELINE"
+    verdict: str  # "MALICIOUS_ATTACK_CHAIN", "BENIGN_BASELINE", "INSUFFICIENT_EVIDENCE"
     confidence_score: float
     overall_risk_score: float
     risk_level: str  # "CRITICAL", "HIGH", "MEDIUM", "LOW", "CLEAN"
@@ -129,3 +143,9 @@ class IncidentReport(BaseModel):
     mitigations: List[MitigationAction]
     evidence_count: int
     summary_explanation: str
+    final_verdict: str = "NORMAL"  # "NORMAL", "SUSPICIOUS", "LIKELY_ATTACK", "INSUFFICIENT_EVIDENCE"
+    evidence_sufficiency_score: float = 0.0  # Independent score: 0.0 - 100.0
+    chain_completeness_score: float = 0.0    # Independent score: 0.0 - 100.0
+    attack_hypothesis: str = ""
+    benign_hypothesis: str = ""
+    hypothesis_evaluation: str = ""

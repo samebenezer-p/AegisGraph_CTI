@@ -44,8 +44,62 @@ class BenchmarkEvaluator:
         attack_chains = reconstructor.reconstruct_attack_chains(events, graph_engine)
 
         if not attack_chains:
-            # Benign baseline / clean log detected
+            unconfirmed = reconstructor.unconfirmed_candidate_chains
             nodes, edges = graph_engine.get_exportable_graph()
+
+            if unconfirmed:
+                # Suspicious activity detected but INSUFFICIENT evidence to confirm attack
+                primary_cand = unconfirmed[0]
+                cand_stages = primary_cand["stages"]
+                cand_actors = primary_cand["actors"]
+                cand_devices = primary_cand["devices"]
+                cand_ips = primary_cand["ips"]
+                cand_apps = primary_cand["apps"]
+
+                cand_risk, cand_sev, _ = RiskEngine.calculate_risk(cand_stages, cand_actors, cand_devices, cand_ips)
+                # Lower risk when unconfirmed
+                cand_risk = min(35.0, round(cand_risk * 0.4, 1))
+                suff_score = EvidenceEngine.calculate_evidence_sufficiency(cand_stages)
+                comp_score = EvidenceEngine.calculate_chain_completeness(cand_stages)
+                att_h, ben_h, eval_h = EvidenceEngine.generate_hypotheses(
+                    cand_stages, cand_actors, cand_devices, cand_ips, cand_apps, final_verdict="INSUFFICIENT_EVIDENCE"
+                )
+                cand_explanation = EvidenceEngine.generate_attack_explanation(
+                    cand_actors, cand_devices, cand_ips, cand_apps, cand_stages,
+                    final_verdict="INSUFFICIENT_EVIDENCE", risk_score=cand_risk,
+                    sufficiency_score=suff_score, completeness_score=comp_score
+                )
+
+                return IncidentReport(
+                    incident_id=f"INC-SUSP-{cand_stages[0].proof.event_id[:8].upper()}",
+                    detected_at=cand_stages[-1].timestamp if cand_stages else "N/A",
+                    is_attack=False,
+                    verdict="INSUFFICIENT_EVIDENCE",
+                    confidence_score=round(sum(s.proof.confidence for s in cand_stages) / len(cand_stages), 2) if cand_stages else 0.5,
+                    overall_risk_score=cand_risk,
+                    risk_level="LOW",
+                    actors_involved=cand_actors,
+                    devices_involved=cand_devices,
+                    ips_involved=cand_ips,
+                    apps_involved=cand_apps,
+                    timeline=cand_stages,
+                    graph_nodes=nodes,
+                    graph_edges=edges,
+                    mitigations=[],
+                    evidence_count=len(cand_stages),
+                    summary_explanation=cand_explanation,
+                    final_verdict="INSUFFICIENT_EVIDENCE",
+                    evidence_sufficiency_score=suff_score,
+                    chain_completeness_score=comp_score,
+                    attack_hypothesis=att_h,
+                    benign_hypothesis=ben_h,
+                    hypothesis_evaluation=eval_h
+                )
+
+            # Benign baseline / clean log detected (NORMAL)
+            att_h, ben_h, eval_h = EvidenceEngine.generate_hypotheses([], [], [], [], [], final_verdict="NORMAL")
+            norm_explanation = EvidenceEngine.generate_attack_explanation([], [], [], [], [], final_verdict="NORMAL")
+
             return IncidentReport(
                 incident_id="INC-CLEAN-BASELINE",
                 detected_at=events[0].timestamp if events else "N/A",
@@ -63,10 +117,16 @@ class BenchmarkEvaluator:
                 graph_edges=edges,
                 mitigations=[],
                 evidence_count=0,
-                summary_explanation="System verification passed: No multi-stage attack chains identified. All event sequences represent legitimate operational activity."
+                summary_explanation=norm_explanation,
+                final_verdict="NORMAL",
+                evidence_sufficiency_score=0.0,
+                chain_completeness_score=0.0,
+                attack_hypothesis=att_h,
+                benign_hypothesis=ben_h,
+                hypothesis_evaluation=eval_h
             )
 
-        # Correlate attack chain
+        # Correlate attack chain (LIKELY_ATTACK)
         primary_chain = attack_chains[0]
         stages = primary_chain["stages"]
         actors = primary_chain["actors"]
@@ -75,8 +135,19 @@ class BenchmarkEvaluator:
         apps = primary_chain["apps"]
 
         risk_score, severity, risk_breakdown = RiskEngine.calculate_risk(stages, actors, devices, ips)
+        suff_score = EvidenceEngine.calculate_evidence_sufficiency(stages)
+        comp_score = EvidenceEngine.calculate_chain_completeness(stages)
+        final_v = "LIKELY_ATTACK"
+
         mitigations = MitigationEngine.generate_playbook(stages, actors, devices, ips, apps)
-        explanation = EvidenceEngine.generate_attack_explanation(actors, devices, ips, apps, stages)
+        att_h, ben_h, eval_h = EvidenceEngine.generate_hypotheses(
+            stages, actors, devices, ips, apps, final_verdict=final_v
+        )
+        explanation = EvidenceEngine.generate_attack_explanation(
+            actors, devices, ips, apps, stages,
+            final_verdict=final_v, risk_score=risk_score,
+            sufficiency_score=suff_score, completeness_score=comp_score
+        )
         nodes, edges = graph_engine.get_exportable_graph()
 
         return IncidentReport(
@@ -96,7 +167,13 @@ class BenchmarkEvaluator:
             graph_edges=edges,
             mitigations=mitigations,
             evidence_count=len(stages),
-            summary_explanation=explanation
+            summary_explanation=explanation,
+            final_verdict=final_v,
+            evidence_sufficiency_score=suff_score,
+            chain_completeness_score=comp_score,
+            attack_hypothesis=att_h,
+            benign_hypothesis=ben_h,
+            hypothesis_evaluation=eval_h
         )
 
     def run_benchmark_suite(self, benchmark_scenarios: List[Dict[str, Any]]) -> Dict[str, Any]:

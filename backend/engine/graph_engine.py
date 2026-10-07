@@ -73,59 +73,61 @@ class ProvenanceGraphEngine:
             timestamp = event.timestamp
             evt_id = event.event_id
 
+            raw_log = event.raw_log
+
             if event.event_type in (EventType.AUTH_LOGIN, EventType.AUTH_FAILED):
                 if src_ip_node and dst_host_node:
-                    self._add_edge(src_ip_node, dst_host_node, "CONNECTED_TO", timestamp, evt_id)
+                    self._add_edge(src_ip_node, dst_host_node, "CONNECTED_TO", timestamp, evt_id, raw_log)
                 if user_node and dst_host_node:
-                    self._add_edge(user_node, dst_host_node, "LOGGED_INTO", timestamp, evt_id)
+                    self._add_edge(user_node, dst_host_node, "LOGGED_INTO", timestamp, evt_id, raw_log)
                 elif user_node and src_host_node:
-                    self._add_edge(user_node, src_host_node, "LOGGED_INTO", timestamp, evt_id)
+                    self._add_edge(user_node, src_host_node, "LOGGED_INTO", timestamp, evt_id, raw_log)
                 if src_ip_node and user_node:
-                    self._add_edge(src_ip_node, user_node, "USED_BY", timestamp, evt_id)
+                    self._add_edge(src_ip_node, user_node, "USED_BY", timestamp, evt_id, raw_log)
 
             elif event.event_type == EventType.PROCESS_SPAWN:
                 host = src_host_node or dst_host_node
                 if user_node and proc_node:
-                    self._add_edge(user_node, proc_node, "SPAWNED", timestamp, evt_id)
+                    self._add_edge(user_node, proc_node, "SPAWNED", timestamp, evt_id, raw_log)
                 if host and proc_node:
-                    self._add_edge(host, proc_node, "EXECUTED_ON", timestamp, evt_id)
+                    self._add_edge(host, proc_node, "EXECUTED_ON", timestamp, evt_id, raw_log)
                 if event.parent_process and proc_node:
                     parent_node = f"proc:{event.parent_process}"
                     self._ensure_node(parent_node, event.parent_process, "Process")
-                    self._add_edge(parent_node, proc_node, "SPAWNED_CHILD", timestamp, evt_id)
+                    self._add_edge(parent_node, proc_node, "SPAWNED_CHILD", timestamp, evt_id, raw_log)
 
             elif event.event_type in (EventType.FILE_ACCESS, EventType.FILE_MODIFY):
                 host = src_host_node or dst_host_node
                 if user_node and file_node:
-                    self._add_edge(user_node, file_node, "ACCESSED", timestamp, evt_id)
+                    self._add_edge(user_node, file_node, "ACCESSED", timestamp, evt_id, raw_log)
                 if proc_node and file_node:
-                    self._add_edge(proc_node, file_node, "READ_WRITE", timestamp, evt_id)
+                    self._add_edge(proc_node, file_node, "READ_WRITE", timestamp, evt_id, raw_log)
                 if host and file_node:
-                    self._add_edge(host, file_node, "STORED_ON", timestamp, evt_id)
+                    self._add_edge(host, file_node, "STORED_ON", timestamp, evt_id, raw_log)
 
             elif event.event_type in (EventType.USB_MOUNT, EventType.USB_TRANSFER):
                 host = src_host_node or dst_host_node
                 if host and usb_node:
-                    self._add_edge(host, usb_node, "MOUNTED_DEVICE", timestamp, evt_id)
+                    self._add_edge(host, usb_node, "MOUNTED_DEVICE", timestamp, evt_id, raw_log)
                 if user_node and usb_node:
-                    self._add_edge(user_node, usb_node, "OPERATED_DEVICE", timestamp, evt_id)
+                    self._add_edge(user_node, usb_node, "OPERATED_DEVICE", timestamp, evt_id, raw_log)
                 if file_node and usb_node:
-                    self._add_edge(file_node, usb_node, "TRANSFERRED_TO", timestamp, evt_id)
+                    self._add_edge(file_node, usb_node, "TRANSFERRED_TO", timestamp, evt_id, raw_log)
 
             elif event.event_type == EventType.NETWORK_CONNECT:
                 if src_host_node and dst_ip_node:
-                    self._add_edge(src_host_node, dst_ip_node, "OUTBOUND_TRAFFIC", timestamp, evt_id)
+                    self._add_edge(src_host_node, dst_ip_node, "OUTBOUND_TRAFFIC", timestamp, evt_id, raw_log)
                 if src_ip_node and dst_host_node:
-                    self._add_edge(src_ip_node, dst_host_node, "INBOUND_TRAFFIC", timestamp, evt_id)
+                    self._add_edge(src_ip_node, dst_host_node, "INBOUND_TRAFFIC", timestamp, evt_id, raw_log)
                 if proc_node and dst_ip_node:
-                    self._add_edge(proc_node, dst_ip_node, "OPENED_SOCKET", timestamp, evt_id)
+                    self._add_edge(proc_node, dst_ip_node, "OPENED_SOCKET", timestamp, evt_id, raw_log)
 
             elif event.event_type in (EventType.PRIVILEGE_ESCALATE, EventType.SERVICE_CREATE, EventType.LOG_CLEAR):
                 host = src_host_node or dst_host_node
                 if user_node and host:
-                    self._add_edge(user_node, host, event.event_type.value, timestamp, evt_id)
+                    self._add_edge(user_node, host, event.event_type.value, timestamp, evt_id, raw_log)
 
-    def _add_edge(self, source: str, target: str, relation: str, timestamp: str, event_id: str):
+    def _add_edge(self, source: str, target: str, relation: str, timestamp: str, event_id: str, raw_log: Optional[str] = None):
         """Adds a directed edge and records metadata."""
         edge_id = f"edge-{len(self.edge_records) + 1}"
         self.graph.add_edge(
@@ -135,7 +137,9 @@ class ProvenanceGraphEngine:
             relation=relation,
             timestamp=timestamp,
             event_id=event_id,
-            is_suspicious=False
+            is_suspicious=False,
+            stage_id=None,
+            raw_log=raw_log
         )
         self.edge_records.append({
             "id": edge_id,
@@ -145,18 +149,29 @@ class ProvenanceGraphEngine:
             "timestamp": timestamp,
             "event_id": event_id,
             "is_suspicious": False,
-            "tactic": None
+            "tactic": None,
+            "stage_id": None,
+            "raw_log": raw_log
         })
 
-    def mark_attack_subgraph(self, suspicious_event_ids: Set[str], compromised_entities: Set[str]):
-        """Marks nodes and edges involved in the attack chain."""
+    def mark_attack_subgraph(
+        self,
+        suspicious_event_ids: Set[str],
+        compromised_entities: Set[str],
+        stage_event_map: Optional[Dict[str, int]] = None
+    ):
+        """Marks nodes and edges involved in the attack chain with stage traceability."""
+        stage_map = stage_event_map or {}
         for edge_rec in self.edge_records:
             if edge_rec["event_id"] in suspicious_event_ids:
                 edge_rec["is_suspicious"] = True
+                if edge_rec["event_id"] in stage_map:
+                    edge_rec["stage_id"] = stage_map[edge_rec["event_id"]]
                 if self.graph.has_edge(edge_rec["source"], edge_rec["target"]):
                     for _, edge_data in self.graph[edge_rec["source"]][edge_rec["target"]].items():
                         if edge_data.get("event_id") == edge_rec["event_id"]:
                             edge_data["is_suspicious"] = True
+                            edge_data["stage_id"] = edge_rec.get("stage_id")
 
         for node_id in self.node_metadata:
             clean_name = self.node_metadata[node_id]["label"]
@@ -190,7 +205,9 @@ class ProvenanceGraphEngine:
                 timestamp=e["timestamp"],
                 event_id=e["event_id"],
                 is_suspicious=e.get("is_suspicious", False),
-                tactic=e.get("tactic")
+                tactic=e.get("tactic"),
+                stage_id=e.get("stage_id"),
+                raw_log=e.get("raw_log")
             ))
         return nodes, edges
 

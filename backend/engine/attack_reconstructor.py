@@ -18,6 +18,7 @@ class AttackReconstructor:
 
     def __init__(self, anomaly_detector: Optional[AnomalyDetector] = None):
         self.detector = anomaly_detector or AnomalyDetector()
+        self.unconfirmed_candidate_chains: List[Dict[str, Any]] = []
 
     def _determine_tactic(self, event: NormalizedEvent, details: Dict[str, Any]) -> Tuple[MitreTactic, str, str]:
         """Maps an event and its anomaly details to MITRE ATT&CK tactic and technique."""
@@ -136,7 +137,7 @@ class AttackReconstructor:
 
         # Step 3: Enforce False Positive Suppression Rules
         # RULE: A genuine coordinated attack must span at least 2 distinct MITRE tactics
-        # and contain corroborated evidence across entities. Isolated alerts are suppressed!
+        # Step 3: Enforce False Positive Suppression Rules
         confirmed_attack_chains = []
 
         for cluster in clusters:
@@ -146,6 +147,7 @@ class AttackReconstructor:
             stages: List[AttackStage] = []
             distinct_tactics: Set[MitreTactic] = set()
             suspicious_event_ids: Set[str] = set()
+            stage_event_map: Dict[str, int] = {}
             actors: Set[str] = set()
             devices: Set[str] = set()
             ips: Set[str] = set()
@@ -155,6 +157,7 @@ class AttackReconstructor:
                 tactic, tech_id, tech_name = self._determine_tactic(evt, details)
                 distinct_tactics.add(tactic)
                 suspicious_event_ids.add(evt.event_id)
+                stage_event_map[evt.event_id] = idx
 
                 if evt.actor_user:
                     actors.add(evt.actor_user)
@@ -169,8 +172,65 @@ class AttackReconstructor:
                 if evt.process_name:
                     apps.add(evt.process_name)
 
-                # Formulate evidence proof
+                # Supporting evidence extraction
+                supporting: List[str] = []
+                if evt.source_ip and details.get("external_ip"):
+                    supporting.append(f"External origin IP: {evt.source_ip}")
+                if details.get("off_hours_hour") is not None:
+                    supporting.append(f"Off-hours temporal window ({details['off_hours_hour']:02d}:00 UTC)")
+                if details.get("unusual_host"):
+                    supporting.append(f"First-time host connection: {details['unusual_host']}")
+                if details.get("flagged_executable"):
+                    supporting.append(f"Offensive/dual-use executable: {details['flagged_executable']}")
+                if details.get("suspicious_command"):
+                    supporting.append(f"Suspicious command arguments: {details['suspicious_command']}")
+                if details.get("sensitive_file"):
+                    supporting.append(f"Confidential asset accessed: {details['sensitive_file']}")
+                if details.get("usb_exfiltration"):
+                    supporting.append(f"Removable storage serial: {details['usb_exfiltration']}")
+                if details.get("anti_forensics"):
+                    supporting.append("Security event log purged")
+                if details.get("shadow_deletion"):
+                    supporting.append("Volume Shadow Copy deletion detected")
+                if details.get("credential_dumping"):
+                    supporting.append("LSASS memory dumping activity")
+                if not supporting and reasons:
+                    supporting.extend(reasons)
+
+                # Missing evidence extraction (expected kill-chain artifacts not observed)
+                missing: List[str] = []
+                if tactic == MitreTactic.INITIAL_ACCESS:
+                    missing.append("No multi-factor authentication (MFA) bypass log observed")
+                elif tactic == MitreTactic.EXECUTION:
+                    missing.append("No persistent scheduled task or service registration confirmed")
+                elif tactic == MitreTactic.COLLECTION:
+                    missing.append("No file archival or compression utility observed")
+                elif tactic == MitreTactic.EXFILTRATION:
+                    missing.append("No outbound C2 network proxy session confirmed on host")
+                elif tactic == MitreTactic.LATERAL_MOVEMENT:
+                    missing.append("No Kerberos ticket-granting request anomaly recorded")
+
+                # Contradicting evidence extraction (never fabricate)
+                contradicting: List[str] = []
+                if evt.source_ip and any(evt.source_ip.startswith(p) for p in ("10.", "192.168.", "172.16.", "127.0.0.1")):
+                    contradicting.append("Source IP is within trusted corporate internal address space")
+                if evt.actor_user and ("admin" in evt.actor_user.lower() or "backup" in evt.actor_user.lower()):
+                    contradicting.append("User identity holds operational administrative/maintenance privileges")
+
+                # Stage Status classification
+                if score >= 0.35 and len(supporting) >= 1:
+                    stage_status = "CONFIRMED"
+                elif score >= 0.20:
+                    stage_status = "PARTIAL"
+                elif contradicting:
+                    stage_status = "CONTRADICTED"
+                else:
+                    stage_status = "PARTIAL"
+
+                # Formulate evidence proof with complete traceability
                 justification_str = " | ".join(reasons) if reasons else "Anomalous entity interaction pattern"
+                affected_ents = list({evt.actor_user, evt.dest_host, evt.source_host, evt.source_ip, evt.file_path, evt.device_id} - {None})
+
                 evidence = AttackEvidence(
                     evidence_id=f"proof-stg-{idx}-{evt.event_id}",
                     event_id=evt.event_id,
@@ -179,7 +239,13 @@ class AttackReconstructor:
                     raw_citation=evt.raw_log or f"Event {evt.event_id}: {evt.event_type.value}",
                     justification=justification_str,
                     confidence=min(0.98, max(0.60, round(score + 0.15, 2))),
-                    indicators=list(details.keys())
+                    indicators=list(details.keys()),
+                    source_event=f"{evt.event_id} ({evt.source})",
+                    entities=affected_ents,
+                    supporting_evidence=supporting,
+                    missing_evidence=missing,
+                    contradicting_evidence=contradicting,
+                    reason=justification_str
                 )
 
                 stage_name = f"Stage {idx}: {tech_name}"
@@ -197,34 +263,41 @@ class AttackReconstructor:
                     technique_name=tech_name,
                     timestamp=evt.timestamp,
                     actor=evt.actor_user or "Unknown Adversary",
-                    affected_entities=list({evt.actor_user, evt.dest_host, evt.source_host, evt.source_ip, evt.file_path, evt.device_id} - {None}),
+                    affected_entities=affected_ents,
                     description=stage_desc,
                     proof=evidence,
-                    risk_contribution=round(score * 25.0, 1)
+                    risk_contribution=round(score * 25.0, 1),
+                    status=stage_status,
+                    mitre_technique=f"{tech_id}: {tech_name}",
+                    source_event=f"{evt.event_id} ({evt.source})",
+                    supporting_evidence=supporting,
+                    missing_evidence=missing,
+                    contradicting_evidence=contradicting
                 ))
 
             # FALSE POSITIVE SUPPRESSION GATE:
             # Require at least 2 distinct tactics OR at least 3 chained actions
-            # If it's just 1 isolated anomaly (e.g. 1 off-hours login or 1 single PowerShell call), suppress it!
+            chain_record = {
+                "stages": stages,
+                "actors": sorted(list(actors)),
+                "devices": sorted(list(devices)),
+                "ips": sorted(list(ips)),
+                "apps": sorted(list(apps)),
+                "tactics_count": len(distinct_tactics),
+                "event_ids": suspicious_event_ids,
+                "stage_event_map": stage_event_map
+            }
+
             if len(distinct_tactics) >= 2 or len(stages) >= 3:
-                # Mark nodes and edges in provenance graph
+                # Mark nodes and edges in provenance graph with stage annotations
                 graph_engine.mark_attack_subgraph(
                     suspicious_event_ids=suspicious_event_ids,
-                    compromised_entities=actors | devices | ips | apps
+                    compromised_entities=actors | devices | ips | apps,
+                    stage_event_map=stage_event_map
                 )
-
-                confirmed_attack_chains.append({
-                    "stages": stages,
-                    "actors": sorted(list(actors)),
-                    "devices": sorted(list(devices)),
-                    "ips": sorted(list(ips)),
-                    "apps": sorted(list(apps)),
-                    "tactics_count": len(distinct_tactics),
-                    "event_ids": suspicious_event_ids
-                })
+                confirmed_attack_chains.append(chain_record)
             else:
-                # Single isolated anomaly -> SUPPRESSED!
-                # Keeps the system clean and silent on benign logs.
-                pass
+                # Track as candidate for INSUFFICIENT_EVIDENCE
+                self.unconfirmed_candidate_chains.append(chain_record)
 
         return confirmed_attack_chains

@@ -342,6 +342,12 @@ body.cyber-theme {
   border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
+.badge.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
 /* Verdict Card */
 .verdict-display {
   display: flex;
@@ -1210,3 +1216,113 @@ body.cyber-theme {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* =====================================================================
+   Hypothesis Reasoning & Evidence-Aware Verification
+   ===================================================================== */
+.hypothesis-panel {
+  margin-top: 2px;
+}
+
+.hypothesis-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hypothesis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.hypo-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hypo-card.attack {
+  border-left: 3px solid var(--accent-red);
+}
+
+.hypo-card.benign {
+  border-left: 3px solid var(--accent-green);
+}
+
+.hypo-title {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.hypo-card.attack .hypo-title { color: var(--accent-red); }
+.hypo-card.benign .hypo-title { color: var(--accent-green); }
+
+.hypo-text {
+  font-size: 12px;
+  color: var(--text-main);
+  line-height: 1.45;
+}
+
+.hypo-eval-box {
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.hypo-eval-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.badge-status-confirmed {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-status-partial {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-status-insufficient {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.proof-evidence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.proof-evidence-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.proof-evidence-item.supporting { color: #a7f3d0; }
+.proof-evidence-item.missing { color: #fed7aa; }
+.proof-evidence-item.contradicting { color: #fecdd3; }
+
