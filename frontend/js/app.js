@@ -67,7 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
       btnRunAnalysis.disabled = false;
       btnRunAnalysis.innerHTML = '<span class="btn-icon">⚡</span> Analyze Threat';
     }
-   // Render Incident Report
+  }
+
+  // Render Incident Report
   function renderIncidentReport(report) {
     // 1. Verdict Card
     const verdictHeading = document.getElementById('verdict-heading');
