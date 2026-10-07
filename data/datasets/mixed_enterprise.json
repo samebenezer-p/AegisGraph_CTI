@@ -1,0 +1,89 @@
+[
+  {
+    "event_id": "clean-001",
+    "timestamp": "2026-10-06T01:00:15Z",
+    "event_type": "AUTH_LOGIN",
+    "source": "Windows-Security-4624",
+    "actor_user": "alice_smith",
+    "source_ip": "192.168.1.105",
+    "source_host": "WKS-DEV-01",
+    "dest_host": "WKS-DEV-01",
+    "raw_log": "EventID 4624: Successful logon for user alice_smith from 192.168.1.105 on WKS-DEV-01"
+  },
+  {
+    "event_id": "usb-exfil-001",
+    "timestamp": "2026-10-06T02:14:10Z",
+    "event_type": "AUTH_LOGIN",
+    "source": "Windows-Security-4624",
+    "actor_user": "edward_snow",
+    "source_ip": "198.51.100.42",
+    "source_host": "REMOTE-CLIENT-EXT",
+    "dest_host": "WKS-FIN-04",
+    "raw_log": "EventID 4624: Successful remote interactive logon for user 'edward_snow' from external IP 198.51.100.42 to workstation WKS-FIN-04 at 02:14:10 UTC"
+  },
+  {
+    "event_id": "usb-exfil-002",
+    "timestamp": "2026-10-06T02:18:35Z",
+    "event_type": "PROCESS_SPAWN",
+    "source": "Windows-Security-4688",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "process_name": "cmd.exe",
+    "process_command": "cmd.exe /c dir \\\\FS-FINANCE\\Confidential\\",
+    "raw_log": "EventID 4688: Process cmd.exe spawned by edward_snow querying confidential financial network share"
+  },
+  {
+    "event_id": "clean-004",
+    "timestamp": "2026-10-06T02:20:00Z",
+    "event_type": "AUTH_LOGIN",
+    "source": "Windows-Security-4624",
+    "actor_user": "bob_jones",
+    "source_ip": "192.168.1.112",
+    "source_host": "WKS-HR-02",
+    "dest_host": "WKS-HR-02",
+    "raw_log": "EventID 4624: Successful logon for user bob_jones from 192.168.1.112 on WKS-HR-02"
+  },
+  {
+    "event_id": "usb-exfil-003",
+    "timestamp": "2026-10-06T02:22:40Z",
+    "event_type": "FILE_ACCESS",
+    "source": "Windows-Security-4663",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "file_path": "C:\\Finance\\Executive_Q3_Audit_Report.xlsx",
+    "process_name": "cmd.exe",
+    "raw_log": "EventID 4663: User edward_snow granted ReadData access to confidential asset C:\\Finance\\Executive_Q3_Audit_Report.xlsx"
+  },
+  {
+    "event_id": "usb-exfil-004",
+    "timestamp": "2026-10-06T02:25:05Z",
+    "event_type": "USB_MOUNT",
+    "source": "Windows-DriverFrameworks-UserMode-2003",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "device_id": "USBSTOR\\Disk&Ven_SanDisk&Prod_Ultra_3.0&Rev_1.00\\0401872199480",
+    "raw_log": "EventID 2003: Peripheral device mounted: USBSTOR\\Disk&Ven_SanDisk&Prod_Ultra_3.0&Rev_1.00 (Serial: 0401872199480) assigned to drive E:\\ on host WKS-FIN-04"
+  },
+  {
+    "event_id": "usb-exfil-005",
+    "timestamp": "2026-10-06T02:26:15Z",
+    "event_type": "USB_TRANSFER",
+    "source": "Endpoint-DLP-Agent-4011",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "file_path": "C:\\Finance\\Executive_Q3_Audit_Report.xlsx",
+    "device_id": "USBSTOR\\Disk&Ven_SanDisk&Prod_Ultra_3.0&Rev_1.00\\0401872199480",
+    "raw_log": "Endpoint DLP: User edward_snow copied confidential file C:\\Finance\\Executive_Q3_Audit_Report.xlsx to Removable USB Drive E:\\Confidential_Exfil\\Executive_Q3_Audit_Report.xlsx"
+  },
+  {
+    "event_id": "clean-007",
+    "timestamp": "2026-10-06T03:05:12Z",
+    "event_type": "PROCESS_SPAWN",
+    "source": "Windows-Security-4688",
+    "actor_user": "it_admin",
+    "source_host": "DC-CORP-01",
+    "process_name": "powershell.exe",
+    "process_command": "powershell.exe -NoProfile -Command Get-Service wuauserv",
+    "raw_log": "EventID 4688: Process powershell.exe executed Get-Service by it_admin on DC-CORP-01"
+  }
+]

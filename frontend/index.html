@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisGraph-CTI | AI-Powered Cyber Threat Intelligence & Attack Provenance Engine</title>
+  <meta name="description" content="AI-Powered Cyber Threat Intelligence platform linking security events across users, devices, IPs, and applications to reconstruct multi-stage attack chains with verifiable proof.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="cyber-theme">
+  <!-- Top Global Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-container">
+        <div class="radar-pulse"></div>
+        <div class="shield-icon">🛡️</div>
+        <div>
+          <h1 class="logo-title">AEGISGRAPH <span class="accent-text">CTI</span></h1>
+          <p class="logo-sub">AI Cyber Threat Intelligence &amp; Multi-Stage Attack Provenance</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="scenario-selector-wrap">
+        <label for="dataset-select" class="selector-label">DATASET / SCENARIO:</label>
+        <select id="dataset-select" class="cyber-select" aria-label="Select Security Log Dataset">
+          <!-- Dynamically populated -->
+        </select>
+        <button id="btn-run-analysis" class="btn btn-primary" title="Analyze Selected Scenario">
+          <span class="btn-icon">⚡</span> Analyze Threat
+        </button>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="system-status-badge" id="system-status-indicator">
+        <span class="status-dot green"></span>
+        <span class="status-label">ZERO-FP GATE ACTIVE</span>
+      </div>
+      <button id="btn-open-eval" class="btn btn-secondary" title="View Precision & Benchmark Evaluation">
+        <span class="btn-icon">📊</span> Benchmark Suite
+      </button>
+      <button id="btn-open-ingest" class="btn btn-ghost" title="Ingest Custom Logs">
+        <span class="btn-icon">📥</span> Ingest Logs
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-grid">
+    <!-- Top KPI & Threat Summary Strip -->
+    <section class="kpi-strip" aria-label="Incident Overview">
+      <!-- Verdict Card -->
+      <div class="kpi-card verdict-card" id="card-verdict">
+        <div class="kpi-header">
+          <span class="kpi-tag">SYSTEM VERDICT</span>
+          <span class="badge" id="badge-verdict-type">READY</span>
+        </div>
+        <div class="verdict-display">
+          <span class="verdict-symbol" id="verdict-icon">🟢</span>
+          <div class="verdict-text-group">
+            <h2 class="verdict-heading" id="verdict-heading">System Standby</h2>
+            <p class="verdict-desc" id="verdict-desc">Select a dataset and click Analyze to reconstruct attack graph.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Score Radar Card -->
+      <div class="kpi-card risk-card">
+        <div class="kpi-header">
+          <span class="kpi-tag">COMPOSITE THREAT RISK</span>
+          <span class="badge risk-level-badge" id="badge-risk-level">0 / 100</span>
+        </div>
+        <div class="risk-meter-container">
+          <div class="radial-gauge-wrap">
+            <svg class="radial-gauge" viewBox="0 0 100 100">
+              <circle class="gauge-bg" cx="50" cy="50" r="42"></circle>
+              <circle class="gauge-fill" id="gauge-fill-circle" cx="50" cy="50" r="42"></circle>
+            </svg>
+            <div class="gauge-value" id="gauge-number">0</div>
+          </div>
+          <div class="risk-meta">
+            <div class="meta-row">
+              <span class="meta-label">Progression Depth:</span>
+              <span class="meta-val" id="val-progression-score">0%</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Blast Radius:</span>
+              <span class="meta-val" id="val-blast-score">0 Nodes</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">False Positive Risk:</span>
+              <span class="meta-val success" id="val-fp-rate">0.0% (Suppressed)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Who Was Involved: Entity Attribution Card -->
+      <div class="kpi-card entities-card">
+        <div class="kpi-header">
+          <span class="kpi-tag">WHO WAS INVOLVED</span>
+          <span class="badge" id="badge-entity-count">0 Entities</span>
+        </div>
+        <div class="entity-pills-container">
+          <div class="entity-category">
+            <span class="cat-label">Identities:</span>
+            <div class="pills-row" id="pills-users"><span class="empty-hint">None</span></div>
+          </div>
+          <div class="entity-category">
+            <span class="cat-label">Endpoints:</span>
+            <div class="pills-row" id="pills-hosts"><span class="empty-hint">None</span></div>
+          </div>
+          <div class="entity-category">
+            <span class="cat-label">Network IPs:</span>
+            <div class="pills-row" id="pills-ips"><span class="empty-hint">None</span></div>
+          </div>
+          <div class="entity-category">
+            <span class="cat-label">Processes:</span>
+            <div class="pills-row" id="pills-apps"><span class="empty-hint">None</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center Workspace: Attack Provenance Graph & Timeline Replay -->
+    <div class="workspace-layout">
+      <!-- Left Column: Interactive Attack Provenance Graph -->
+      <section class="panel graph-panel" aria-label="Attack Provenance Graph">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <span class="panel-icon">🕸️</span>
+            <h3 class="panel-title">Heterogeneous Attack Provenance Graph</h3>
+          </div>
+          <div class="graph-legend">
+            <span class="legend-item"><span class="legend-dot user"></span>User</span>
+            <span class="legend-item"><span class="legend-dot host"></span>Host</span>
+            <span class="legend-item"><span class="legend-dot ip"></span>IP</span>
+            <span class="legend-item"><span class="legend-dot proc"></span>App</span>
+            <span class="legend-item"><span class="legend-dot file"></span>File</span>
+            <span class="legend-item"><span class="legend-dot device"></span>USB</span>
+            <span class="legend-item"><span class="legend-dot attack"></span>Compromised</span>
+          </div>
+          <div class="graph-controls">
+            <button id="btn-reset-zoom" class="btn btn-sm btn-ghost" title="Reset View">Reset View</button>
+            <button id="btn-toggle-labels" class="btn btn-sm btn-ghost" title="Toggle Node Labels">Labels</button>
+          </div>
+        </div>
+
+        <div class="graph-viewport-container" id="graph-container">
+          <svg id="provenance-graph-svg" class="graph-svg"></svg>
+          <div class="graph-watermark">AEGISGRAPH SPATIAL PROVENANCE</div>
+          <!-- Entity Detail Flyout -->
+          <div id="node-inspector-flyout" class="node-inspector hidden">
+            <div class="inspector-header">
+              <span id="inspect-type" class="inspector-type-badge">Entity</span>
+              <button id="btn-close-inspector" class="btn-close">&times;</button>
+            </div>
+            <h4 id="inspect-label" class="inspector-name">Entity Name</h4>
+            <div class="inspector-body" id="inspect-details"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Chronological Attack Timeline & Stage Proofs -->
+      <section class="panel timeline-panel" aria-label="Attack Progression Timeline">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <span class="panel-icon">⏱️</span>
+            <h3 class="panel-title">Attack Progression Storyline</h3>
+          </div>
+          <div class="timeline-controls">
+            <button id="btn-replay-play" class="btn btn-sm btn-accent" title="Play Replay">
+              <span class="btn-icon">▶</span> Play Replay
+            </button>
+            <span id="replay-step-indicator" class="step-indicator">Stage 0/0</span>
+          </div>
+        </div>
+
+        <div class="timeline-scroll-container" id="timeline-container">
+          <div class="empty-state" id="timeline-empty-state">
+            <span class="empty-icon">🛡️</span>
+            <p>No active attack stages detected. Run an analysis scenario to populate the chronological causal chain.</p>
+          </div>
+          <div class="timeline-track" id="timeline-track">
+            <!-- Dynamically populated attack stages -->
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Bottom Split: Forensic Evidence Proofs & Mitigation Action Center -->
+    <div class="bottom-layout">
+      <!-- Evidence Drawer: Proof for every stage -->
+      <section class="panel evidence-panel" aria-label="Verifiable Forensic Proofs">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <span class="panel-icon">🔍</span>
+            <h3 class="panel-title">Forensic Evidence &amp; Proof Citations (100% Verifiable)</h3>
+          </div>
+          <span class="badge badge-proof" id="badge-verified-proofs">0 Proofs</span>
+        </div>
+        <div class="evidence-body" id="evidence-table-container">
+          <p class="empty-hint-text">Each attack stage requires verifiable citations from raw logs. Run analysis to inspect proofs.</p>
+        </div>
+      </section>
+
+      <!-- Mitigation Action Center: What to do about it -->
+      <section class="panel mitigation-panel" aria-label="Incident Response Playbook">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <span class="panel-icon">🚨</span>
+            <h3 class="panel-title">Incident Response &amp; Mitigation Playbook</h3>
+          </div>
+          <span class="badge badge-mitigation" id="badge-actions-count">0 Actions</span>
+        </div>
+        <div class="mitigation-body" id="mitigation-actions-container">
+          <p class="empty-hint-text">Actionable containment commands, firewall rules, and host isolation scripts will populate here upon detection.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Modal: Benchmark Evaluation Suite (Precision, Recall, Zero-FP verification) -->
+  <div id="modal-benchmark" class="cyber-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-eval-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">📊</span>
+          <h3 id="modal-eval-title" class="modal-title">Autonomous Benchmark &amp; False Positive Evaluation Suite</h3>
+        </div>
+        <button id="btn-close-eval-modal" class="btn-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-subtitle">
+          Evaluates AegisGraph-CTI across all benchmark datasets. Enforces the strict rule:
+          <em>"If your system raises too many false alarms on clean logs, your score gets capped. More alerts &ne; better score."</em>
+        </p>
+
+        <!-- Benchmark Metrics Grid -->
+        <div class="eval-metrics-grid" id="eval-metrics-grid">
+          <div class="metric-box">
+            <span class="m-val highlight-green" id="m-precision">100.0%</span>
+            <span class="m-lbl">Precision (Purity)</span>
+          </div>
+          <div class="metric-box">
+            <span class="m-val highlight-cyan" id="m-recall">100.0%</span>
+            <span class="m-lbl">Recall (Coverage)</span>
+          </div>
+          <div class="metric-box">
+            <span class="m-val highlight-green" id="m-fpr">0.0%</span>
+            <span class="m-lbl">False Positive Rate (FPR)</span>
+          </div>
+          <div class="metric-box">
+            <span class="m-val highlight-amber" id="m-f1">1.00</span>
+            <span class="m-lbl">F1-Score</span>
+          </div>
+          <div class="metric-box">
+            <span class="m-val highlight-green" id="m-evidence">100.0%</span>
+            <span class="m-lbl">Evidence Citation Rate</span>
+          </div>
+          <div class="metric-box">
+            <span class="m-val highlight-cyan" id="m-timeline">100.0%</span>
+            <span class="m-lbl">Timeline Accuracy</span>
+          </div>
+        </div>
+
+        <!-- Scenarios Breakdown Table -->
+        <div class="eval-table-wrap">
+          <h4 class="sub-heading">Benchmark Scenarios Validation</h4>
+          <table class="cyber-table" id="table-benchmark-scenarios">
+            <thead>
+              <tr>
+                <th>Scenario Name</th>
+                <th>Logs Count</th>
+                <th>Expected</th>
+                <th>Predicted</th>
+                <th>Verdict Status</th>
+                <th>Risk Score</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-benchmark">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-rerun-eval" class="btn btn-primary">
+          <span class="btn-icon">🔄</span> Re-Run Evaluation Suite
+        </button>
+        <button id="btn-dismiss-eval" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Custom Log Ingestor -->
+  <div id="modal-ingest" class="cyber-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-ingest-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">📥</span>
+          <h3 id="modal-ingest-title" class="modal-title">Live Log Ingestion &amp; Parser</h3>
+        </div>
+        <button id="btn-close-ingest-modal" class="btn-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-subtitle">Paste raw JSON security events (Windows Event Log, Syslog, Zeek Conn, Endpoint DLP) to reconstruct attack graph in real-time.</p>
+        <div class="form-group">
+          <label for="custom-log-input" class="form-label">Raw JSON Security Events Array:</label>
+          <textarea id="custom-log-input" class="cyber-textarea" rows="12" placeholder='[
+  {
+    "event_id": "evt-01",
+    "timestamp": "2026-10-06T02:00:00Z",
+    "event_type": "AUTH_LOGIN",
+    "actor_user": "external_attacker",
+    "source_ip": "198.51.100.99",
+    "dest_host": "WKS-01",
+    "raw_log": "Successful login from external IP 198.51.100.99"
+  }
+]'></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-submit-custom-logs" class="btn btn-primary">
+          <span class="btn-icon">⚡</span> Analyze Custom Logs
+        </button>
+        <button id="btn-dismiss-ingest" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/graph_viz.js"></script>
+  <script src="/js/timeline.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

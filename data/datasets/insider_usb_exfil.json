@@ -1,0 +1,77 @@
+[
+  {
+    "event_id": "usb-exfil-001",
+    "timestamp": "2026-10-06T02:14:10Z",
+    "event_type": "AUTH_LOGIN",
+    "source": "Windows-Security-4624",
+    "actor_user": "edward_snow",
+    "source_ip": "198.51.100.42",
+    "source_host": "REMOTE-CLIENT-EXT",
+    "dest_host": "WKS-FIN-04",
+    "details": {
+      "LogonType": 10,
+      "Anomaly": "Unusual geographical origin (IP: 198.51.100.42) during off-hours (02:14 AM UTC)"
+    },
+    "raw_log": "EventID 4624: Successful remote interactive logon for user 'edward_snow' from external IP 198.51.100.42 to workstation WKS-FIN-04 at 02:14:10 UTC"
+  },
+  {
+    "event_id": "usb-exfil-002",
+    "timestamp": "2026-10-06T02:18:35Z",
+    "event_type": "PROCESS_SPAWN",
+    "source": "Windows-Security-4688",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "process_name": "cmd.exe",
+    "process_command": "cmd.exe /c dir \\\\FS-FINANCE\\Confidential\\",
+    "parent_process": "explorer.exe",
+    "details": {
+      "Activity": "Enumeration of sensitive finance repository"
+    },
+    "raw_log": "EventID 4688: Process cmd.exe spawned by edward_snow querying confidential financial network share"
+  },
+  {
+    "event_id": "usb-exfil-003",
+    "timestamp": "2026-10-06T02:22:40Z",
+    "event_type": "FILE_ACCESS",
+    "source": "Windows-Security-4663",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "file_path": "C:\\Finance\\Executive_Q3_Audit_Report.xlsx",
+    "process_name": "cmd.exe",
+    "details": {
+      "AccessMask": "0x1 (ReadData)",
+      "Novelty": "Target file never previously accessed by user 'edward_snow'"
+    },
+    "raw_log": "EventID 4663: User edward_snow granted ReadData access to confidential asset C:\\Finance\\Executive_Q3_Audit_Report.xlsx"
+  },
+  {
+    "event_id": "usb-exfil-004",
+    "timestamp": "2026-10-06T02:25:05Z",
+    "event_type": "USB_MOUNT",
+    "source": "Windows-DriverFrameworks-UserMode-2003",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "device_id": "USBSTOR\\Disk&Ven_SanDisk&Prod_Ultra_3.0&Rev_1.00\\0401872199480",
+    "details": {
+      "FriendlyName": "SanDisk Ultra USB 3.0 (64GB)",
+      "DriveLetter": "E:\\"
+    },
+    "raw_log": "EventID 2003: Peripheral device mounted: USBSTOR\\Disk&Ven_SanDisk&Prod_Ultra_3.0&Rev_1.00 (Serial: 0401872199480) assigned to drive E:\\ on host WKS-FIN-04"
+  },
+  {
+    "event_id": "usb-exfil-005",
+    "timestamp": "2026-10-06T02:26:15Z",
+    "event_type": "USB_TRANSFER",
+    "source": "Endpoint-DLP-Agent-4011",
+    "actor_user": "edward_snow",
+    "source_host": "WKS-FIN-04",
+    "file_path": "C:\\Finance\\Executive_Q3_Audit_Report.xlsx",
+    "device_id": "USBSTOR\\Disk&Ven_SanDisk&Prod_Ultra_3.0&Rev_1.00\\0401872199480",
+    "details": {
+      "DestinationPath": "E:\\Confidential_Exfil\\Executive_Q3_Audit_Report.xlsx",
+      "BytesTransferred": 4829104,
+      "Action": "FileCopyToRemovableMedia"
+    },
+    "raw_log": "Endpoint DLP: User edward_snow copied confidential file C:\\Finance\\Executive_Q3_Audit_Report.xlsx to Removable USB Drive E:\\Confidential_Exfil\\Executive_Q3_Audit_Report.xlsx (4.8MB)"
+  }
+]

