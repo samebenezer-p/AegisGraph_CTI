@@ -127,28 +127,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const gaugeFill = document.getElementById('gauge-fill-circle');
     const gaugeNumber = document.getElementById('gauge-number');
     const badgeRiskLevel = document.getElementById('badge-risk-level');
-    const valProgression = document.getElementById('val-progression-score');
     const valBlast = document.getElementById('val-blast-score');
     const valEvSuff = document.getElementById('val-evidence-sufficiency');
     const valChainComp = document.getElementById('val-chain-completeness');
 
-    const score = report.overall_risk_score;
-    gaugeNumber.textContent = Math.round(score);
-    badgeRiskLevel.textContent = `${report.risk_level} (${score}/100)`;
+    const score = report.overall_risk_score || 0;
+    if (gaugeNumber) gaugeNumber.textContent = Math.round(score);
+    if (badgeRiskLevel) badgeRiskLevel.textContent = `${report.risk_level} (${score}/100)`;
 
     // Stroke dashoffset: 264 max length
     const offset = 264 - (264 * (score / 100));
-    gaugeFill.style.strokeDashoffset = offset;
+    if (gaugeFill) gaugeFill.style.strokeDashoffset = offset;
 
     if (score >= 80) {
-      gaugeFill.style.stroke = 'var(--accent-red)';
-      badgeRiskLevel.className = 'badge danger';
+      if (gaugeFill) gaugeFill.style.stroke = 'var(--accent-red)';
+      if (badgeRiskLevel) badgeRiskLevel.className = 'badge danger';
     } else if (score >= 40) {
-      gaugeFill.style.stroke = 'var(--accent-amber)';
-      badgeRiskLevel.className = 'badge';
+      if (gaugeFill) gaugeFill.style.stroke = 'var(--accent-amber)';
+      if (badgeRiskLevel) badgeRiskLevel.className = 'badge';
     } else {
-      gaugeFill.style.stroke = 'var(--accent-green)';
-      badgeRiskLevel.className = 'badge success';
+      if (gaugeFill) gaugeFill.style.stroke = 'var(--accent-green)';
+      if (badgeRiskLevel) badgeRiskLevel.className = 'badge success';
     }
 
     if (valEvSuff) {
@@ -158,18 +157,20 @@ document.addEventListener('DOMContentLoaded', () => {
       valChainComp.textContent = `${(report.chain_completeness_score !== undefined ? report.chain_completeness_score : 0).toFixed(1)}%`;
     }
 
-    valProgression.textContent = report.timeline.length > 0 ? `${report.timeline.length * 20}%` : '0%';
-    const totalBlastNodes = (report.actors_involved.length + report.devices_involved.length + report.ips_involved.length);
-    valBlast.textContent = `${totalBlastNodes} Nodes`;
+    const actors = report.actors_involved || [];
+    const devices = report.devices_involved || [];
+    const ips = report.ips_involved || [];
+    const totalBlastNodes = actors.length + devices.length + ips.length;
+    if (valBlast) valBlast.textContent = `${totalBlastNodes} Nodes`;
 
     // 3. Who Was Involved Pills
     const badgeEntityCount = document.getElementById('badge-entity-count');
-    badgeEntityCount.textContent = `${totalBlastNodes} Entities`;
+    if (badgeEntityCount) badgeEntityCount.textContent = `${totalBlastNodes} Entities`;
 
-    renderPillList('pills-users', report.actors_involved, true);
-    renderPillList('pills-hosts', report.devices_involved, true);
-    renderPillList('pills-ips', report.ips_involved, false);
-    renderPillList('pills-apps', report.apps_involved, false);
+    renderPillList('pills-users', actors, true);
+    renderPillList('pills-hosts', devices, true);
+    renderPillList('pills-ips', ips, false);
+    renderPillList('pills-apps', report.apps_involved || [], false);
 
     // Hypotheses
     const textAttackHypo = document.getElementById('text-attack-hypothesis');
