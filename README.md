@@ -11,6 +11,21 @@
 
 ---
 
+## 📋 Submission Guidelines Cross-Reference Matrix
+
+| Submission Guideline | Status | Section in this Document | Verification Command / URL |
+| :--- | :---: | :--- | :--- |
+| **● Working System** | ✅ Complete | [Section 1 & 12](#1-executive-summary--problem-overview) | `http://localhost:8000/` |
+| **● Source Code** | ✅ Complete | [Section 13](#13-project-repository-structure) | `git log -n 1` / Complete Repository |
+| **● Data Pipeline** | ✅ Complete | [Section 3](#3-data-pipeline--schema-normalization) | [backend/pipeline/normalizer.py](file:///e:/EAV_Cyber/backend/pipeline/normalizer.py) |
+| **● Core Model / Reasoning** | ✅ Complete | [Section 4 & 5](#4-core-model--graph-analytics) | [backend/engine/](file:///e:/EAV_Cyber/backend/engine/) (Graph + Anomaly + Causal DAG) |
+| **● Evidence & Explanation** | ✅ Complete | [Section 6](#6-verifiable-evidence--explanation-engine) | [backend/engine/evidence_engine.py](file:///e:/EAV_Cyber/backend/engine/evidence_engine.py) |
+| **● Sample Input & Output** | ✅ Complete | [Section 10](#10-sample-input--output-prompt-scenario) | `insider_usb_exfil.json` $\to$ `IncidentReport` |
+| **● Scope Note** | ✅ Complete | [Section 11](#11-scope-note-minimum-viable-solution-vs-stretch-goals) | MVP vs. Stretch Goals Comparison |
+| **● Live Demonstration** | ✅ Complete | [Section 12](#12-quick-start--setup-instructions) | Web UI at `http://localhost:8000/` or `python run.py --eval` |
+
+---
+
 ## 1. Executive Summary & Problem Overview
 
 Modern enterprise security perimeters ingest millions of disparate event logs each day from endpoints, identity providers, firewalls, and applications. In isolation, each log often appears benign or low-severity (e.g., an employee logging in after-hours or an administrator executing a command). However, when correlated across time, entities, and protocols, these events frequently reveal **coordinated, multi-stage advanced cyberattacks**.
